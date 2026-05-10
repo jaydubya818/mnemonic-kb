@@ -415,7 +415,7 @@ The lint rule **forbids `node:fs` imports** outside `packages/core`. All filesys
 
 ## Status and roadmap
 
-**Current:** v0.1.0 — first release. [Release verification](docs/release-v0.1.0.md). [Dogfood log](docs/dogfood-log.md).
+**Current:** v0.1.0 — first release. [Release verification](docs/release-v0.1.0.md). [Dogfood log](docs/dogfood-log.md). **[Dogfood kit](docs/dogfood-kit.md)** — aliases, MCP setup, capture cheatsheet for the v0.1 → v0.2 dogfooding phase.
 
 **v0.2 priorities** (evidence-based from [docs/dogfood-log.md](docs/dogfood-log.md) §10):
 
