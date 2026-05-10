@@ -1,0 +1,17 @@
+{
+  "name": "@mnemonic/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": { "mnemonic": "./bin/mnemonic.js" },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@mnemonic/core": "workspace:*",
+    "@mnemonic/retrieval": "workspace:*",
+    "@mnemonic/schemas": "workspace:*",
+    "yaml": "^2.4.0"
+  }
+}

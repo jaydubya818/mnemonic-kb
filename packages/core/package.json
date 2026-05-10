@@ -1,0 +1,15 @@
+{
+  "name": "@mnemonic/core",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "import": "./dist/index.js", "types": "./dist/index.d.ts" } },
+  "scripts": { "build": "tsup src/index.ts --format esm --dts --clean" },
+  "dependencies": {
+    "@mnemonic/schemas": "workspace:*",
+    "ulid": "^2.3.0",
+    "yaml": "^2.4.0",
+    "zod": "^3.23.0"
+  }
+}

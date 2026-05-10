@@ -1,0 +1,26 @@
+[
+  { "input": "remember that Hermes should not own memory directly", "expectedSkill": "memory/remember" },
+  { "input": "save this for later", "expectedSkill": "memory/remember" },
+  { "input": "note this", "expectedSkill": "memory/remember" },
+
+  { "input": "propose this as a lesson", "expectedSkill": "memory/propose-memory" },
+  { "input": "save this as a decision", "expectedSkill": "memory/propose-memory" },
+
+  { "input": "promote this memory", "expectedSkill": "memory/promote-memory" },
+  { "input": "canonicalize this proposal", "expectedSkill": "memory/promote-memory" },
+
+  { "input": "get context for this repo task", "expectedSkill": "retrieval/get-task-context" },
+  { "input": "build a context pack", "expectedSkill": "retrieval/get-task-context" },
+  { "input": "what should I know before working on run cancellation", "expectedSkill": "retrieval/get-task-context" },
+
+  { "input": "get repo context", "expectedSkill": "retrieval/repo-context" },
+
+  { "input": "can this skill be invoked", "expectedSkill": "maintenance/check-resolvable" },
+  { "input": "audit my skills", "expectedSkill": "maintenance/check-resolvable" },
+
+  { "input": "skillify this", "expectedSkill": "maintenance/skillify" },
+  { "input": "make this a reusable skill", "expectedSkill": "maintenance/skillify" },
+
+  { "input": "prepare Hermes for this task", "expectedSkill": "integrations/hermes-context" },
+  { "input": "give Hermes context for run cancellation", "expectedSkill": "integrations/hermes-context" }
+]

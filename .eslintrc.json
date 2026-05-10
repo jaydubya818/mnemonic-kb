@@ -1,0 +1,45 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module"
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    "dist/",
+    ".turbo/",
+    "coverage/",
+    "**/.mnemonic/",
+    "fixtures/",
+    "examples/",
+    "templates/",
+    "**/*.d.ts",
+    "**/migrations/**"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "apps/**/*.{ts,tsx}",
+        "packages/retrieval/**/*.{ts,tsx}",
+        "packages/connectors/**/*.{ts,tsx}",
+        "packages/agent-adapters/**/*.{ts,tsx}",
+        "packages/schemas/**/*.{ts,tsx}"
+      ],
+      "excludedFiles": ["**/*.test.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              { "name": "fs",                "message": "Do not import fs outside packages/core. Use core/vaultWriter or core/init or core/skills." },
+              { "name": "node:fs",           "message": "Do not import node:fs outside packages/core. Use core/vaultWriter or core/init or core/skills." },
+              { "name": "fs/promises",       "message": "Do not import fs/promises outside packages/core. Use core/vaultWriter or core/init or core/skills." },
+              { "name": "node:fs/promises",  "message": "Do not import node:fs/promises outside packages/core. Use core/vaultWriter or core/init or core/skills." }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
