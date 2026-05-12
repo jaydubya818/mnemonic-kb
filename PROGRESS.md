@@ -86,3 +86,27 @@ cd /tmp/mnemonic-build
 TMPDIR=/tmp/vitest-tmp pnpm install --package-import-method copy --ignore-scripts
 TMPDIR=/tmp/vitest-tmp pnpm test
 ```
+
+---
+
+## 2026-05-11 — README workflow verification
+
+Ran the four-step day-to-day workflow against a fresh `/tmp/dogfood-vault`. Goal: verify the README's claims survive contact with a clean install.
+
+| Step | Verdict | Notes |
+|---|---|---|
+| 1. Capture (`mn remember`) | ✅ | Works. Empty/missing content errors cleanly with exit 1. `--repo` / `--tag` / `--project` flags all functional. Frontmatter is well-formed. |
+| 2. Recall (`mn context --task`) | ❌ (known v0.2 P0) | Same query: `mn search` returns matching inbox note at relevance 14.9; `mn context` returns 0 results, confidence: low. Confirms the dogfood-log P0 priority. README now flags this as a known rough edge with a workaround (`mn search` fallback). |
+| 3. Canonicalize | ✅ with caveat | Lifecycle works end-to-end. Canonical page has all sections, Timeline entry, evidence link, status=active, source=promotion. **Caveat:** `mn inbox promote` hardcodes `typeHint: lesson`. To promote into a `decision` or `pattern`, must use `mn propose ... --type ...` + `mn promote`. README now documents both paths explicitly. |
+| 4. Browse (wiki) | ✅ | All routes return 200. Proposal-status badges render. New canonical page renders with full Markdown. Skill pages render with frontmatter + body. |
+
+**Captured during this run** (in `/tmp/dogfood-vault/inbox/`):
+- `bug` × 1 — `inbox promote` typeHint hardcoded to lesson
+- `bug` × 1 (confirmation) — context excludes inbox notes
+- `lesson` × 2 — canonical page structure is good; low-confidence warning is good
+- Plus the ordinary remembers from step 1
+
+**README improvements made:**
+- Day-to-day section now shows actual command output, flags the v0.2 P0 retrieval gap inline with workaround, splits canonicalize into "quick path" (lesson) vs "explicit-type path" (decision/pattern).
+- Ecosystem table now lists what actually ships in v0.1 vs what's adapter-only.
+- Wiki section enumerates verified routes in a table.

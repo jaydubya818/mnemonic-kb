@@ -10,9 +10,116 @@
 [![pnpm](https://img.shields.io/badge/pnpm-9-orange)](#installation)
 [![telemetry](https://img.shields.io/badge/telemetry-zero-success)](#telemetry)
 
-Coding agents start every chat from zero. Mnemonic remembers. It's a **local-first**, **contract-first** Markdown vault + CLI + MCP server + read-only wiki + skill/resolver layer that gives you (and your coding agents) durable repo-aware context across tasks.
+## The problem
 
-Mnemonic does one thing: **memory**. Hermes reasons and acts. Pi governs execution. Agentic-KB enriches. Each system has a single job and clean contracts between them.
+Every time you start a chat with Claude Code or Cursor, the agent has no memory of anything you decided last week. You repeat yourself constantly. Decisions get re-litigated. Patterns you've already proven get re-invented. The model gets better; your accumulated context doesn't go anywhere.
+
+## What Mnemonic is
+
+A local-first Markdown notebook that your coding agent can read and write through an MCP server. Everything lives in `~/mnemonic-vault` as plain `.md` files. No database, no cloud, no telemetry. You own it; you can `grep` it; you can put it under git. The agent calls it; it returns context; you stop repeating yourself.
+
+It is **not** a brain. It is the filing cabinet underneath the brain.
+
+## What it does day-to-day
+
+Each step below has been end-to-end verified against a fresh vault. The bracketed lines flag what's known rough; the [v0.2 P0](docs/dogfood-log.md) section explains how those will close.
+
+### 1. Capture
+
+```bash
+mn remember "Hermes should not own durable memory directly"
+# → Captured to inbox: 01KRBZ0ZHHZHZW2Y2D4H0H9H69
+#   /Users/you/mnemonic-vault/inbox/01KRBZ0ZHHZHZW2Y2D4H0H9H69.md
+```
+
+Writes a Markdown file to `inbox/` with a ULID, full frontmatter (`type: note`, `status: active`, `source: cli`), and a body with `# Captured` + `# Hints` sections. Optional flags: `--repo <slug>`, `--project <slug>`, `--tag <t>` (repeatable). Same operation is exposed via MCP as `mnemonic.remember` for your coding agent.
+
+**No canonicalization happens here** — even if you pass `--tag decision` or hint at a type, the file goes to inbox. Promotion is the only path to canonical types (see step 3).
+
+### 2. Recall
+
+```bash
+mn context --task "implement run cancellation" --repo hermes-agent
+```
+
+Returns a Markdown context pack with `## Compiled Truth` excerpts from repo/project pages, plus `## Relevant Decisions`, `## Relevant Lessons`, `## Applicable Patterns`, all citing local file paths. Footer reports the token budget and confidence (`low` / `medium` / `high` based on how many active relevant pages were found). Paste the Markdown directly into a planning prompt → your agent has the context.
+
+Same operation via MCP: `mnemonic.get_task_context`. Same payload, same paths, returnable as JSON.
+
+> **Known rough edge ([v0.2 P0](docs/dogfood-log.md#10-recommended-v02-priority-list-evidence-based)):** the context buckets currently include only canonical types (decision / lesson / pattern). If the only relevant content in your vault is in `inbox/` (not yet promoted), `mn context` returns *zero* matches while `mn search "<same query>"` finds them with high relevance. **Workaround:** when `context` returns "confidence: low", fall back to `mn search` for the same terms; promote any worth keeping. v0.2 will add an inbox-fallback section to the context pack.
+
+### 3. Canonicalize
+
+Two ways to promote an inbox note into a canonical typed page. They produce different results.
+
+**Quick path** (one inbox note → lesson):
+
+```bash
+mn inbox promote <id> --reason "This is the cancellation propagation policy"
+# → creates _proposals/<pid>.md  (typeHint: lesson, status: open)
+
+mn promote <pid>
+# → lands at repos/<repo>/lessons/<new-id>.md  (type: lesson, source: promotion)
+# → proposal file preserved with status: promoted (audit trail)
+```
+
+**Explicit-type path** (when you want a `decision` or `pattern`):
+
+```bash
+mn propose "Run cancellation must propagate to children synchronously." \
+  --reason "Architecture decision worth canonicalizing" \
+  --type decision \
+  --repo hermes-agent
+# → creates _proposals/<pid>.md  (typeHint: decision)
+
+mn promote <pid>
+# → lands at repos/hermes-agent/decisions/<new-id>.md
+```
+
+The canonical page has all sections pre-seeded (`## Compiled Truth`, `## Current State`, `## Decisions`, `## Lessons`, `## Patterns`, `## Known Pitfalls`, `## Related Pages`, `## Timeline`) and links back to the originating proposal via `evidence[]`. Nothing is overwritten by promotion — subsequent promotes that target the same page append to `## Timeline` instead. Nothing is destroyed; promoted and rejected proposals stay on disk.
+
+> **Known rough edge:** `mn inbox promote` hardcodes `typeHint: lesson` and ignores the wording of `--reason`. To promote into a `decision` or `pattern`, use the **explicit-type path** above (`mn propose ... --type ...`). v0.2 will add `--type` to `mn inbox promote`.
+
+### 4. Browse
+
+```bash
+mn wiki                          # or: pnpm --filter @mnemonic/wiki start
+# → http://localhost:4477
+```
+
+Read-only wiki, localhost only, no auth. Routes verified working:
+
+| Route | Shows |
+|---|---|
+| `/` | Recent pages with type + status + date |
+| `/p/:id` | Rendered page (frontmatter + Markdown body + backlinks) |
+| `/search?q=…` | Server-rendered ranked results |
+| `/skills` | All 8 active skills |
+| `/skills/:id` | Skill frontmatter + body |
+| `/inbox` | Unpromoted captures |
+| `/proposals` | Open + promoted + rejected, with status badges |
+| `/healthz` | `ok` |
+
+Hono + server-rendered Markdown + Tailwind via CDN. No build step.
+
+## How it fits with the rest of your stack
+
+| System | Role | What ships in v0.1 |
+|---|---|---|
+| **Mnemonic** | Remembers. Markdown vault + skill catalog + resolver. *That's all it does.* | Full: CLI, MCP server (14 tools), wiki, 8 skills, proposal/promote lifecycle. |
+| **Hermes** | Reasons and acts. Calls Mnemonic for context; proposes durable knowledge back after a task. | Adapter stubs + integration doc + the only real function: `buildHermesContextBlock` (pure formatter). Hermes itself calls Mnemonic via MCP — no runtime coupling. |
+| **Pi** | Governs execution and audit. Will gate risky writes. | `PiAuditRecord` type shape defined. No enforcement wired (v0.3). |
+| **Agentic-KB** | Enriches. Import/export bridge to your richer personal KB. | Pure mappers (`mapAgenticKbArticleToMnemonicPage` / inverse) + documented lossy-fields table. `importFromAgenticKb` / `exportToAgenticKb` throw with doc pointers (v0.3 wires them). |
+
+Three systems, three jobs, clean contracts. Mnemonic doesn't try to be a brain. It's the filing cabinet underneath the brain.
+
+The integration docs are concrete and ready for whoever builds against them: [docs/hermes-integration.md](docs/hermes-integration.md), [docs/pi-integration.md](docs/pi-integration.md), [docs/agentic-kb-integration.md](docs/agentic-kb-integration.md).
+
+## Why it compounds
+
+After a week of capture, your agent stops asking you the same questions twice. After a month, you have a personal knowledge base that survives every model upgrade and every chat restart. The data is yours, in plain Markdown. The agent just reads it. Models get smarter; your context layer keeps getting denser.
+
+The tagline is *thin harness, fat skills, explicit resolver, durable memory* — meaning the runtime is small, the procedural knowledge lives in versioned Markdown skills, routing is explicit (no magic dispatching), and the memory itself is plain text on your disk under your git history. Inspired by Garry Tan's GBrain architecture, but smaller, with stronger boundaries, and designed to plug into a specific agent ecosystem rather than be one.
 
 ```mermaid
 graph TD
