@@ -6,9 +6,10 @@ import {
   parseFrontmatter, writeFrontmatter,
   loadFilingRules, resolveVaultPath, assertPathInsideVault,
   buildInboxNote, createVaultWriter, buildLookup, listPages, listInbox,
+  checkResolvable,
   type VaultContext,
 } from "./index.js";
-import type { Page } from "@mnemonic/schemas";
+import type { Page, Skill, ResolverEntry } from "@mnemonic/schemas";
 
 function tempVault(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mnemonic-vault-"));
@@ -241,5 +242,57 @@ describe("inbox + vaultWriter", () => {
     await writer.writeInbox(buildInboxNote(ctx, { content: "second", tags: [], capturedBy: "cli" }));
     const notes = listInbox(root);
     expect(notes.length).toBe(2);
+  });
+});
+
+describe("checkResolvable: deterministic-step-without-tool warnings", () => {
+  function skill(id: string, steps: Skill["frontmatter"]["steps"]): Skill {
+    return {
+      path: `/fake/${id}/SKILL.md`,
+      body: "",
+      frontmatter: {
+        id,
+        name: id,
+        description: "fixture",
+        status: "active",
+        parameters: [],
+        outputs: [],
+        uses: [],
+        steps,
+        risk: "low",
+        governance: "none",
+        triggers: [],
+      },
+    };
+  }
+
+  function resolverFor(skills: Skill[]): ResolverEntry[] {
+    return skills.map((s) => ({ intentExample: s.frontmatter.id, skillId: s.frontmatter.id }));
+  }
+
+  it("emits no rollup warning when every deterministic step has a tool", () => {
+    const skills = [skill("a", [{ id: "step1", kind: "deterministic", tool: "fs.read" }])];
+    const audit = checkResolvable({
+      skills, skillLoadErrors: [], resolver: resolverFor(skills), resolverLoadErrors: [], filingRulesValid: true,
+    });
+    expect(audit.warnings.some((w) => w.includes("deterministic"))).toBe(false);
+  });
+
+  it("collapses multiple missing-tool steps into a single rollup warning instead of one per step", () => {
+    const skills = [
+      skill("a", [
+        { id: "step1", kind: "deterministic" },
+        { id: "step2", kind: "deterministic" },
+      ]),
+      skill("b", [{ id: "step1", kind: "deterministic" }]),
+    ];
+    const audit = checkResolvable({
+      skills, skillLoadErrors: [], resolver: resolverFor(skills), resolverLoadErrors: [], filingRulesValid: true,
+    });
+    const rollupWarnings = audit.warnings.filter((w) => w.includes("deterministic"));
+    expect(rollupWarnings.length).toBe(1);
+    expect(rollupWarnings[0]).toContain("3 deterministic steps without a registered tool");
+    expect(rollupWarnings[0]).toContain("a: step \"step1\"");
+    expect(rollupWarnings[0]).toContain("b: step \"step1\"");
   });
 });
