@@ -157,6 +157,7 @@ export function checkResolvable(opts: CheckResolvableInput): ResolverAuditResult
   }
 
   const reachable = new Set(opts.resolver.map((r) => r.skillId));
+  const missingToolSteps: string[] = [];
   for (const s of opts.skills) {
     if (s.frontmatter.status === "active" && !reachable.has(s.frontmatter.id)) {
       errors.push(`Active skill ${s.frontmatter.id} is not reachable from RESOLVER.md`);
@@ -166,9 +167,20 @@ export function checkResolvable(opts: CheckResolvableInput): ResolverAuditResult
     }
     for (const step of s.frontmatter.steps) {
       if (step.kind === "deterministic" && !step.tool) {
-        warnings.push(`${s.frontmatter.id}: step "${step.id}" is deterministic but has no tool`);
+        missingToolSteps.push(`${s.frontmatter.id}: step "${step.id}"`);
       }
     }
+  }
+  // Rolled up into one line instead of one warning per step: with v0.1's
+  // expected baseline of unregistered deterministic steps, printing each
+  // occurrence separately drowns out warnings that need attention.
+  // See docs/dogfood-log.md P2 #5.
+  if (missingToolSteps.length === 1) {
+    warnings.push(`${missingToolSteps[0]} is deterministic but has no tool`);
+  } else if (missingToolSteps.length > 1) {
+    warnings.push(
+      `${missingToolSteps.length} deterministic steps without a registered tool (expected in v0.1; see v0.2 enforcement): ${missingToolSteps.join(", ")}`,
+    );
   }
 
   const laneToSkills = new Map<string, string[]>();
